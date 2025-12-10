@@ -1,3 +1,17 @@
+card data show
+
+SELECT
+    1 SL,
+    '' ICON,
+    TO_CHAR(NVL(TRIM(:P998_DEBIT_AMOUNT), 0), '999G999G999G999G999G999G990') AS "DR_AMOUNT",
+    'DR Amount' Title
+FROM DUAL;
+
+---------------------------------------------------------------------------------------
+
+
+
+
 SELECT 
     1 AS SL,
     'https://controlio.net/i/svg/brand-figure.svg' AS ICON,

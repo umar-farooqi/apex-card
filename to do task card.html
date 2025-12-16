@@ -1,0 +1,464 @@
+DECLARE
+  v_priority_class VARCHAR2(50);
+  v_status_class VARCHAR2(50);
+  v_assigned_text VARCHAR2(500);
+  v_assigned_to_text VARCHAR2(500);
+BEGIN
+  htp.p('<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Management Dashboard</title>
+ <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        
+            min-height: 100vh;
+      
+        }
+
+        .cards-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(400px, 1fr));
+            gap: 25px;
+            padding: 10px 10px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0, 0, 0, 0.4);
+        }
+
+        .priority-badge {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            text-transform: uppercase;
+            color: white;
+        }
+
+        .priority-high { background: #ff4757; }
+        .priority-medium { background: #ffa502; }
+        .priority-normal { background: #26de81; }
+        .priority-low { background: #26de81; }
+
+        .card-header {
+            margin-bottom: 20px;
+            padding-right: 80px;
+        }
+
+        .main-task {
+            font-size: 1em;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            line-height: auto;
+        }
+
+        .assigned-by {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: #7f8c8d;
+            font-size: 0.9em;
+            margin-bottom: 15px;
+        }
+
+        .assigned-by span:nth-child(3) {
+    margin-left: auto;
+}
+
+        .assigned-by-icon { font-size: 1.1em; }
+        .assigned-by-name { font-weight: 600; color: #34495e; }
+        .assigned-by-you { font-weight: 700; color: #3498db; }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+            margin-bottom: 15px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+        }
+
+        .info-item { text-align: center; }
+
+        .info-label {
+            font-size: 0.75em;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+            display: block;
+            font-weight: 600;
+        }
+
+        .info-value {
+            font-size: 0.95em;
+            color: #34495e;
+            font-weight: 600;
+            display: block;
+        }
+
+        .category-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+
+        .remarks-section { margin: 15px 0; }
+
+        .remarks-box {
+            padding: 12px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            margin-bottom: 10px;
+            position: relative;
+        }
+
+        .remarks-box.user-remarks { border-left-color: #3498db; }
+
+        .remarks-label {
+            font-size: 0.75em;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            margin-bottom: 5px;
+            font-weight: 600;
+        }
+
+        .remarks-text {
+            color: #2c3e50;
+            font-size: 0.95em;
+            line-height: 1.5;
+            max-height: 60px;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .remarks-text.expanded { max-height: 500px; }
+
+        .remarks-toggle {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 4px 10px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            background: white;
+            color: #667eea;
+            font-weight: 600;
+            cursor: pointer;
+            font-size: 0.85em;
+            transition: 0.2s;
+        }
+
+        .remarks-toggle:hover {
+            background: #667eea;
+            color: white;
+        }
+
+        .attachments-section {
+            margin: 15px 0;
+            padding: 12px;
+            background: #f9f9f9;
+            border-radius: 8px;
+            border: 1px dashed #ddd;
+        }
+
+        .attachments-label {
+            font-size: 0.75em;
+            color: #7f8c8d;
+            text-transform: uppercase;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+
+        .attachment-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px;
+            background: white;
+            border-radius: 6px;
+            margin-bottom: 6px;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+
+        .attachment-item:hover {
+            background: #e8f4f8;
+            transform: translateX(3px);
+        }
+
+        .attachment-item:last-child { margin-bottom: 0; }
+        .attachment-icon { font-size: 1.2em; }
+        .attachment-name { font-size: 0.9em; color: #34495e; font-weight: 500; flex: 1; }
+
+        .attachment-badge {
+            font-size: 0.75em;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: #667eea;
+            color: white;
+        }
+
+        .status-btn {
+            width: 100%;
+            padding: 12px;
+            border: 0;
+            border-radius: 8px;
+            font-size: 1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: white;
+        }
+
+        .status-pending { background: #f39c12; }
+        .status-pending:hover { background: #e67e22; }
+        .status-in-process { background: #3498db; }
+        .status-in-process:hover { background: #2980b9; }
+        .status-closed { background: #27ae60; }
+        .status-closed:hover { background: #229954; }
+        .status-on-hold { background: #95a5a6; }
+        .status-on-hold:hover { background: #7f8c8d; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <div class="cards-grid">');
+
+
+  FOR task_rec IN (
+
+    WITH USERS AS (
+        SELECT
+            FIRST_NAME || ' ' || LAST_NAME AS USERNAME,
+            USER_ID
+        FROM AB_UM_USERS_REG
+        WHERE STATUS = 'Y'
+    )
+
+    ,DOCUMENT AS (
+            SELECT
+                DOC_TYPE,
+                DOC_TYPE_ID,
+                '<a href="https://AKB.FAISALMOVERS.CO:8080/i/AKB/' || DOC_ID || DOCUMENTS_TYPE || '" target="_blank">Download</a>' AS DOWNLOAD_LINK,
+                '<img src="https://AKB.FAISALMOVERS.CO:8080/i/AKB/' || DOC_ID || DOCUMENTS_TYPE || '" width="100px" height="100px" />' AS IMAGE
+    FROM 
+        AB_DOCUMENT_RECORDS
+    WHERE 
+        DOC_TYPE =  'TASK ASSIGN'
+        AND STATUS = 'Y'
+    )
+    SELECT 
+        ATN.ID AS TASK_ID,
+        ATN.ASSIGNED_TO_TASK,
+        ATN.ASSIGNED_FROM_TASK,
+        ATN.PRIORITY,
+        ATN.START_DATE,
+        ATN.CLOSING_DATE,
+        ATN.TASK_STATUS,
+        ATN.ASSIGNED_ID,
+        NVL(ATN.REMARKS,  'No Remarks ') AS REMARKS,
+        NVL(ATN.USER_REMARKS,  'No User Remarks ') AS USER_REMARKS,
+        NVL(NULL, 'SUB_DOC') AS ATN_ATTACHMENT,
+        NVL(ATNS.NOTES,  'TASK TITLE ') AS MAIN_TASK,
+        NVL(ATNS.CATEGORY,  'General ') AS CATEGORY,
+        NVL(NULL, 'DOC') AS ATNS_ATTACHMENT,
+        INITCAP(US.USERNAME) AS ASSIGNED_BY_NAME,
+        INITCAP(UST.USERNAME) AS ASSIGNED_TO_NAME,
+        NVL(DOWNLOAD_LINK, 'No document found') DOWNLOAD_LINK
+    FROM 
+        AB_TODO_NOTES ATN
+        LEFT JOIN AB_TODO_NOTES ATNS ON ATNS.ID = ATN.ASSIGNED_ID
+        LEFT JOIN USERS US ON US.USER_ID = ATNS.USER_ID
+        LEFT JOIN USERS UST ON UST.USER_ID = ATN.ASSIGNED_TO_TASK
+        LEFT JOIN DOCUMENT MDOC ON MDOC.DOC_TYPE_ID = ATNS.ID
+    WHERE
+        (ATN.ASSIGNED_TO_TASK = :GV_USER_ID OR ATN.ASSIGNED_FROM_TASK = :GV_USER_ID)
+        AND ATN.TASK_STATUS = 'PENDING'
+    ORDER BY ATN.ID DESC
+
+  ) LOOP
+  
+    -- Set CSS classes
+    v_priority_class := 'priority-' || LOWER(task_rec.PRIORITY);
+    v_status_class := 'status-' || LOWER(REPLACE(task_rec.TASK_STATUS, ' ', '-'));
+    
+    -- Determine assigned by text
+    IF task_rec.ASSIGNED_FROM_TASK = :GV_USER_ID THEN
+      v_assigned_text := '<span class="assigned-by-you">Assigned By You</span>';
+    ELSE
+      v_assigned_text := 'Assigned by: <span class="assigned-by-name">' || 
+                         NVL(task_rec.ASSIGNED_BY_NAME, 'Unknown') || '</span>';
+    END IF;
+
+    -- Determine assigned to text
+    IF task_rec.ASSIGNED_TO_TASK = :GV_USER_ID THEN
+      v_assigned_to_text := '<span class="assigned-by-you">Assigned To You</span>';
+    ELSE
+      v_assigned_to_text := 'Assigned to: <span class="assigned-by-name">' || 
+                         NVL(task_rec.ASSIGNED_TO_NAME, 'Unknown') || '</span>';
+    END IF;
+    
+    -- ==================== CARD START ====================
+    htp.p('<div class="card">');
+    
+    -- Priority Badge
+    htp.p('  <div class="priority-badge ' || v_priority_class || '">');
+    htp.p('    ' || task_rec.PRIORITY);
+    htp.p('  </div>');
+    
+    -- Card Header
+    htp.p('  <div class="card-header">');
+    htp.p('    <div class="main-task">' || APEX_ESCAPE.HTML(task_rec.MAIN_TASK) || '</div>');
+    htp.p('    <div class="assigned-by">');
+    htp.p('      <span class="assigned-by-icon">👤</span>');
+    htp.p('      <span>' || v_assigned_to_text || '</span>');
+    htp.p('      <span class="assigned-by-icon">👤</span>');
+    htp.p('      <span>' || v_assigned_text || '</span>');
+    htp.p('    </div>');
+    htp.p('  </div>');
+    
+    -- Info Grid (Dates + Category)
+    htp.p('  <div class="info-grid">');
+    htp.p('    <div class="info-item">');
+    htp.p('      <span class="info-label">📅 Start Date</span>');
+    htp.p('      <span class="info-value">' || TO_CHAR(task_rec.START_DATE, 'DD-Mon-YY') || '</span>');
+    htp.p('    </div>');
+    htp.p('    <div class="info-item">');
+    htp.p('      <span class="info-label">⏰ Due Date</span>');
+    htp.p('      <span class="info-value">' || TO_CHAR(task_rec.CLOSING_DATE, 'DD-Mon-YY') || '</span>');
+    htp.p('    </div>');
+    htp.p('    <div class="info-item">');
+    htp.p('      <span class="info-label">🏷️ Category</span>');
+    htp.p('      <span class="category-badge">' || APEX_ESCAPE.HTML(task_rec.CATEGORY) || '</span>');
+    htp.p('    </div>');
+    htp.p('  </div>');
+    
+    -- Remarks Section
+    htp.p('  <div class="remarks-section">');
+    
+    -- Task Remarks
+    htp.p('    <div class="remarks-box">');
+    htp.p('      <div class="remarks-label">📝 Task Remarks</div>');
+    htp.p('      <div class="remarks-text" id="remarks1_' || task_rec.TASK_ID || '">');
+    htp.p('        ' || APEX_ESCAPE.HTML(task_rec.REMARKS));
+    htp.p('      </div>');
+    htp.p('    </div>');
+    
+    -- User Remarks
+    htp.p('    <div class="remarks-box user-remarks">');
+    htp.p('      <div class="remarks-label">💬 User Remarks</div>');
+    htp.p('      <div class="remarks-text" id="remarks2_' || task_rec.TASK_ID || '">');
+    htp.p('        ' || APEX_ESCAPE.HTML(task_rec.USER_REMARKS));
+    htp.p('      </div>');
+    htp.p('    </div>');
+    
+    htp.p('  </div>');
+    
+   
+    IF task_rec.DOWNLOAD_LINK IS NOT NULL THEN
+      htp.p('  <div class="attachments-section">');
+      htp.p('    <div class="attachments-label">📎 Attachments</div>');
+      
+      -- Main Attachment from ATNS
+      IF task_rec.DOWNLOAD_LINK IS NOT NULL THEN
+        htp.p('    <div class="attachment-item">');
+        htp.p('      <span class="attachment-icon">📄</span>');
+        htp.p('      <span class="attachment-name">' || task_rec.DOWNLOAD_LINK || '</span>');
+        htp.p('      <span class="attachment-badge">Main</span>');
+        htp.p('    </div>');
+      
+    END IF;
+
+      
+      -- Document from ATN
+    --   IF task_rec.ATN_ATTACHMENT IS NOT NULL THEN
+    --     htp.p('    <div class="attachment-item" onclick="downloadFile(' || 
+    --           task_rec.TASK_ID || ',' || CHR(39) || 'doc' || CHR(39) || ')">');
+    --     htp.p('      <span class="attachment-icon">📎</span>');
+    --     htp.p('      <span class="attachment-name">' || APEX_ESCAPE.HTML(task_rec.ATN_ATTACHMENT) || '</span>');
+    --     htp.p('      <span class="attachment-badge">Doc</span>');
+    --     htp.p('    </div>');
+    --   END IF;
+      
+      htp.p('  </div>');
+    END IF;
+    
+      IF task_rec.ASSIGNED_TO_TASK = :GV_USER_ID THEN
+      -- Clickable button for assigned user
+      htp.p('  <button type="button" class="status-btn status-btn-active ' || v_status_class || '" onclick="openTaskDialog(' || 
+            task_rec.TASK_ID || ',' || 
+            CHR(39) || REPLACE(APEX_ESCAPE.JS_LITERAL(task_rec.MAIN_TASK), CHR(39), CHR(92) || CHR(39)) || CHR(39) || ',' || 
+            CHR(39) || task_rec.TASK_STATUS || CHR(39) || ')">');
+      htp.p('    ' || APEX_ESCAPE.HTML(task_rec.TASK_STATUS));
+      htp.p('  </button>');
+    ELSE
+      -- Read-only button for other users
+      htp.p('  <div style="text-align: center;" class="status-btn status-btn-readonly ' || v_status_class || '">');
+      htp.p('    ' || APEX_ESCAPE.HTML(task_rec.TASK_STATUS));
+      htp.p('  </div>');
+    END IF;
+    
+      htp.p('  </div>');
+    
+            
+  END LOOP;
+
+  htp.p('        </div>
+    </div>
+
+    <script>
+        function toggleRemarks(elementId) {
+            const remarksText = document.getElementById(elementId);
+            const button = event.target;
+            
+            if (remarksText.classList.contains("expanded")) {
+                remarksText.classList.remove("expanded");
+                button.textContent = "Show More";
+            } else {
+                remarksText.classList.add("expanded");
+                button.textContent = "Show Less";
+            }
+        }
+        
+
+        
+        function downloadFile(fileId, fileType) {
+            // Implement your file download logic here
+            // Example: window.location.href = "f?p=&APP_ID.:0:&SESSION.:DOWNLOAD::P0_FILE_ID,P0_FILE_TYPE:" + fileId + "," + fileType;
+            console.log("Downloading file - ID:", fileId, "Type:", fileType);
+            alert("Download file ID: " + fileId + " Type: " + fileType);
+        }
+    </script>
+</body>
+</html>');
+  
+END;
